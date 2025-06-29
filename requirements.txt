@@ -2,4 +2,5 @@ discord.py
 openai
 nest_asyncio
 yfinance
-mplfinance
+matplotlib
+flask

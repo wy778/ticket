@@ -7,9 +7,8 @@ import os
 import asyncio
 from flask import Flask
 from threading import Thread
-from datetime import datetime, timedelta
 
-# 啟用 asyncio 支援
+# 啟用 asyncio 支援（防止 event loop 重複問題）
 nest_asyncio.apply()
 
 # Flask keep_alive server
@@ -20,15 +19,17 @@ def home():
     return "I'm alive"
 
 def run():
-    app.run(host='0.0.0.0', port=8080)
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host='0.0.0.0', port=port)
 
 def keep_alive():
     t = Thread(target=run)
     t.start()
 
-# Discord & OpenAI 設定
-DISCORD_TOKEN = os.environ['DISCORD_TOKEN']
-OPENAI_API_KEY = os.environ['OPENAI_API_KEY']
+# 從環境變數取得金鑰（請在 Railway Variables 裡設定）
+DISCORD_TOKEN = os.getenv('DISCORD_TOKEN')
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+
 openai.api_key = OPENAI_API_KEY
 
 intents = discord.Intents.default()
@@ -44,7 +45,7 @@ async def on_message(message):
     if message.author == client.user:
         return
 
-    if message.content.startswith('股票超人 '):
+    if message.content.startswith('!股票超人 '):
         stock_code = message.content.split(' ')[1].strip()
         yf_code = f"{stock_code}.TW"
 
@@ -79,7 +80,7 @@ async def on_message(message):
             plt.savefig('linechart.png')
             plt.close()
 
-            # ChatGPT 分析
+            # ChatGPT 分析提示詞
             prompt = (
                 f"請你以專業投資分析師身分，分析台股代碼 {stock_code}（{company_name}）最近一個月的股價走勢，"
                 f"提供具體的投資建議（例如：是否買入、賣出或觀望，以及原因）。"
@@ -94,11 +95,11 @@ async def on_message(message):
                 f"\n請用中文回覆，格式分段清晰。"
             )
 
-            response = openai.chat.completions.create(
+            response = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo",
                 messages=[{"role": "user", "content": prompt}]
             )
-            answer = response.choices[0].message.content.strip()
+            answer = response['choices'][0]['message']['content'].strip()
 
             reply = (
                 f"📊 **{company_name} ({stock_code}) 台股資訊**\n"
@@ -122,6 +123,8 @@ async def on_message(message):
         except Exception as e:
             await message.channel.send(f"⚠️ 查詢時發生錯誤：{str(e)}")
 
-# 開啟 keep_alive 並啟動 Discord Bot
+# 啟動 keep_alive (Flask server)
 keep_alive()
+
+# 啟動 Discord Bot
 client.run(DISCORD_TOKEN)

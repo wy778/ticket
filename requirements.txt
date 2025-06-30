@@ -1,6 +1,6 @@
-discord.py>=2.3
-openai>=1.25
-yfinance>=0.2
-matplotlib>=3.9
-nest_asyncio>=1.6
-Flask>=3.0        # 若使用 keep_alive.py
+discord.py
+openai
+yfinance
+matplotlib
+nest_asyncio
+Flask
